@@ -17,14 +17,15 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Storage;
 
 class MenuResource extends Resource
 {
     protected static ?string $model = Menu::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-squares-plus';
-
 
     public static function form(Form $form): Form
     {
@@ -42,6 +43,9 @@ class MenuResource extends Resource
 
                     FileUpload::make('image')
                         ->image()
+                        ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/gif'])
+                        ->directory('uploaded-menus')
+                        ->disk('public')
                         ->required(),
 
                     TextInput::make('price')
@@ -60,7 +64,6 @@ class MenuResource extends Resource
                             'drinks' => 'Drinks'
                         ])
                         ->required(),
-
                     Toggle::make('is_available')
                         ->required()
                         ->default(1)
@@ -81,30 +84,33 @@ class MenuResource extends Resource
                     ->searchable(),
                 Tables\Columns\ImageColumn::make('image'),
                 Tables\Columns\TextColumn::make('price')
-                    ->money()
+                    ->currency('IDR')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('category'),
-                Tables\Columns\TextColumn::make('is_available')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\IconColumn::make('is_available')
+                    ->label('Status')
+                    ->boolean(),
             ])
             ->filters([
                 //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()->after(function (Menu $record) {
+                    if ($record->image) {
+                        Storage::disk('public')->delete($record->image);
+                    }
+                }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()->after(function (Collection $records) {
+                        foreach ($records as $key => $value) {
+                            if ($value->image) {
+                                Storage::disk('public')->delete($value->image);
+                            }
+                        }
+                    }),
                 ]),
             ]);
     }
@@ -121,7 +127,7 @@ class MenuResource extends Resource
         return [
             'index' => Pages\ListMenus::route('/'),
             // 'create' => Pages\CreateMenu::route('/create'),
-            'edit' => Pages\EditMenu::route('/{record}/edit'),
+            // 'edit' => Pages\EditMenu::route('/{record}/edit'),
         ];
     }
 }
