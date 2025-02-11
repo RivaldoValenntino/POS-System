@@ -1,4 +1,4 @@
-<!-- component -->
-<div class="container mx-auto px-5 bg-white">
-
+<div class="container bg-white px-5">
+    <div class="grid grid-cols-3 gap-4">
+    </div>
 </div>
